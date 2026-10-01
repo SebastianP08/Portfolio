@@ -116,6 +116,7 @@
       herramienta: f.herramienta.value.trim(),
       descripcion: f.descripcion.value.trim(),
       enProceso: f.enProceso.checked,
+      destacado: f.destacado.checked,
       horasInvertidas: Number(f.horasInvertidas.value),
       etapas: f.etapas.value.split(",").map((s) => s.trim()).filter(Boolean),
     };
@@ -138,6 +139,7 @@
     f.etapas.value = (p.etapas ?? []).join(", ");
     f.enlace.value = p.enlace ?? "";
     f.enProceso.checked = Boolean(p.enProceso);
+    f.destacado.checked = Boolean(p.destacado);
   }
 
   // --- Create ---

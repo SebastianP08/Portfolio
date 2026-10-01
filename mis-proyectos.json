@@ -1,6 +1,7 @@
 [
   {
     "id": 1,
+    "destacado": true,
     "nombre": "Página Web Jaziz",
     "categoria": "Diseño Web",
     "herramienta": "Visual Studio Code",
@@ -12,6 +13,7 @@
   },
   {
     "id": 2,
+    "destacado": true,
     "nombre": "Página Web GlobalSeguros",
     "categoria": "Diseño Web",
     "herramienta": "Visual Studio Code",
@@ -24,6 +26,7 @@
   },
   {
     "id": 3,
+    "destacado": true,
     "nombre": "Elementos 3D para GlobalSeguros",
     "categoria": "Modelado 3D",
     "herramienta": "Blender",
@@ -48,6 +51,7 @@
   },
   {
     "id": 5,
+    "destacado": true,
     "nombre": "Animación de una Pelota 3D",
     "categoria": "Animación 3D",
     "herramienta": "Blender",
@@ -60,6 +64,7 @@
   },
   {
     "id": 6,
+    "destacado": true,
     "nombre": "Animación de Péndulo 3D",
     "categoria": "Animación 3D",
     "herramienta": "Blender",

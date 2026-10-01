@@ -21,8 +21,12 @@ async function loadJson(file) {
 // leaving a section silently empty.
 const SERVER_HINT = `Abre la página con un servidor local (extensión Live Server de VS Code o <code>python -m http.server</code> dentro de esta carpeta) en vez de abrir el archivo directamente.`;
 
+// Panels show only the projects marked "destacado" in mis-proyectos.json
+// (all 8 are too crowded); the cards below still list everything. If none
+// is marked, the first 5 are used.
 function renderPanels() {
-  panelsRow.innerHTML = projects
+  const featured = projects.filter((p) => p.destacado);
+  panelsRow.innerHTML = (featured.length ? featured : projects.slice(0, 5))
     .map((p) => {
       const href = p.enlace ? esc(p.enlace) : "#projects";
       const external = p.enlace ? ' target="_blank" rel="noopener"' : "";

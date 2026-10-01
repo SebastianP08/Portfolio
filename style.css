@@ -66,7 +66,8 @@ body.is-locked { overflow: hidden; }
 /* Dark overlay keeps the label readable over any image. */
 .panel::before {
   content: ""; position: absolute; inset: 0;
-  background: linear-gradient(to top, rgb(0 0 0 / 0.8), rgb(0 0 0 / 0.1) 60%);
+  /* Only the bottom third is darkened, so the image stays clean above the label. */
+  background: linear-gradient(to top, rgb(0 0 0 / 0.85), transparent 35%);
 }
 .panel:hover, .panel:focus-visible { flex: 2.6; }
 .panel__label {
@@ -77,6 +78,10 @@ body.is-locked { overflow: hidden; }
 .panel__label strong { display: block; font-family: var(--font-title); font-size: clamp(0.8rem, 1.1vw, 1.1rem); text-transform: uppercase; line-height: 1.2; }
 .panel__label span { color: var(--text); opacity: 0.75; font-size: 0.75rem; }
 .panel__label { inset: auto 1rem 2rem 1rem; }
+/* Near the bottom, the skew pulls the first panel's edge left by another
+   --shift on top of the row's own -shift offset, so its label needs 2x
+   --shift of room or its start is cut off. */
+.panel:first-child .panel__label { left: calc(var(--shift) * 2 + 1rem); }
 
 .hero__surname { display: block; font-weight: 400; color: var(--accent); font-size: 0.55em; text-align: center; }
 
@@ -153,7 +158,7 @@ body.is-locked { overflow: hidden; }
 @media (max-width: 700px) {
   .panels__row { flex-direction: column; margin-inline: 0; }
   .panel { flex: 1; margin: 0; transform: none; border-inline: 0; border-block: 2px solid var(--bg); }
-  .panel__label { transform: none; }
+  .panel__label, .panel:first-child .panel__label { transform: none; left: 1rem; }
   .panel:hover, .panel:focus-visible { flex: 1; }
   .navbar nav { gap: 0.8rem; font-size: 0.8rem; }
 }
