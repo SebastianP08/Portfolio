@@ -332,6 +332,19 @@ function playIntro() {
   document.addEventListener("keydown", skip);
 }
 
+// Smooth scroll for in-page links (navbar, panels). Done in JS because CSS
+// "scroll-behavior: smooth" breaks ScrollTrigger's pinned Skills section.
+function setupAnchorScroll() {
+  document.addEventListener("click", (e) => {
+    const link = e.target.closest('a[href^="#"]');
+    if (!link || link.getAttribute("href") === "#") return;
+    const target = document.querySelector(link.getAttribute("href"));
+    if (!target) return;
+    e.preventDefault();
+    target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
+  });
+}
+
 // Back-to-top button: shown once the hero has been scrolled past.
 function setupBackToTop() {
   const btn = document.getElementById("back-to-top");
@@ -471,6 +484,7 @@ function setupSkillsScroll() {
 async function boot() {
   await Promise.all([initInfo(), initProjects()]);
   setupBackToTop();
+  setupAnchorScroll();
   setupHeroLines();
   playIntro();
 

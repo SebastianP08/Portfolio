@@ -10,7 +10,11 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
+/* No CSS "scroll-behavior: smooth" here: ScrollTrigger resets the scroll
+   position when it refreshes, and with smooth scrolling that reset is
+   animated, so it measures wrong positions (pinned Skills section jumps and
+   leaves an empty gap). Anchor links are smoothed in script.js instead. */
+html { scroll-behavior: auto; }
 body { background: var(--bg); color: var(--text); font-family: var(--font-body); line-height: 1.5; }
 a { color: inherit; text-decoration: none; }
 h1, h2 { font-family: var(--font-title); text-transform: uppercase; letter-spacing: 0.04em; }
