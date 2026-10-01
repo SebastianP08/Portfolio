@@ -38,13 +38,10 @@ function renderPanels() {
     .join("");
 }
 
-function renderCards(category) {
-  const list = category === "Todos" ? projects : projects.filter((p) => p.categoria === category);
-  cardsEl.innerHTML = list
-    .map(
-      (p) => `
+function cardHtml(p) {
+  return `
       <article class="card">
-        <img class="card__img" src="${esc(p.imagen)}" alt="${esc(p.nombre)}" loading="lazy" />
+        <div class="card__media"><img class="card__img" src="${esc(p.imagen)}" alt="${esc(p.nombre)}" loading="lazy" /></div>
         <div class="card__body">
           ${p.enProceso ? '<span class="badge">En proceso</span>' : ""}
           <h3>${esc(p.nombre)}</h3>
@@ -52,11 +49,33 @@ function renderCards(category) {
           <p class="card__desc">${esc(p.descripcion)}</p>
           ${p.enlace ? `<a class="card__link" href="${esc(p.enlace)}" target="_blank" rel="noopener">Ver proyecto</a>` : ""}
         </div>
-      </article>`
-    )
-    .join("");
+      </article>`;
+}
+
+// Cards start with PAGE_SIZE projects of the current filter; "Mostrar más"
+// appends the next PAGE_SIZE. Appending (instead of re-rendering) keeps the
+// cards already on screen from replaying their reveal.
+const PAGE_SIZE = 4;
+const showMoreBtn = document.getElementById("show-more");
+let filteredProjects = [];
+let shownCount = 0;
+
+function showNextCards() {
+  const next = filteredProjects.slice(shownCount, shownCount + PAGE_SIZE);
+  cardsEl.insertAdjacentHTML("beforeend", next.map(cardHtml).join(""));
+  shownCount += next.length;
+  showMoreBtn.hidden = shownCount >= filteredProjects.length;
   revealCards();
 }
+
+function renderCards(category) {
+  filteredProjects = category === "Todos" ? projects : projects.filter((p) => p.categoria === category);
+  shownCount = 0;
+  cardsEl.innerHTML = "";
+  showNextCards();
+}
+
+showMoreBtn.addEventListener("click", showNextCards);
 
 function renderFilters() {
   const categories = ["Todos", ...new Set(projects.map((p) => p.categoria))];
@@ -75,6 +94,7 @@ function showProjectsError(error) {
   console.error("Could not load mis-proyectos.json:", error);
   cardsEl.innerHTML = `<p class="projects__error">No se pudieron cargar los proyectos. ${SERVER_HINT}</p>`;
   panelsRow.innerHTML = "";
+  showMoreBtn.hidden = true;
 }
 
 async function initProjects() {
@@ -223,15 +243,29 @@ function lettersFadeIn(targets) {
   });
 }
 
-// Cards are re-created on every filter, so their old tweens are killed first.
-let cardTweens = [];
+// Cards reveal: the image is uncovered from the top-left corner while it
+// zooms out, then the text comes in (CSS transitions toggled by .is-in).
+// Cards are re-created on every filter, so their old triggers are killed first.
+const animateCards = !reduceMotion && window.gsap && window.ScrollTrigger;
+if (animateCards) cardsEl.classList.add("js-reveal");
+
+let cardTriggers = [];
 function revealCards() {
-  cardTweens.forEach((t) => {
-    t.scrollTrigger?.kill();
-    t.kill();
+  if (!animateCards) return;
+  cardTriggers.forEach((t) => t.kill());
+  // Only cards not yet revealed: ones already on screen must not be re-batched.
+  cardTriggers = ScrollTrigger.batch(".card:not(.is-in)", {
+    start: "top 88%",
+    once: true,
+    onEnter: (batch) =>
+      batch.forEach((card, i) => {
+        card.style.setProperty("--d", i * 0.12 + "s");
+        card.classList.add("is-in");
+        // Drop the cascade delay once revealed so hover reacts instantly.
+        setTimeout(() => card.style.removeProperty("--d"), 2000);
+      }),
   });
-  cardTweens = revealOnScroll(".card");
-  window.ScrollTrigger?.refresh();
+  ScrollTrigger.refresh();
 }
 
 // Intro: the name animates in letter by letter, then the overlay lifts away.
@@ -249,7 +283,9 @@ function playIntro() {
     .join("");
   intro.classList.add("is-active");
   document.body.classList.add("is-locked");
-  gsap.set(".hero__title", { opacity: 0, y: 40 });
+  // Each word of the title acts as a mask; its letters wait below it.
+  const heroChars = splitChars(document.querySelector(".hero__title"));
+  gsap.set(heroChars, { yPercent: 110 });
 
   let finished = false;
   const finish = () => {
@@ -266,7 +302,7 @@ function playIntro() {
         window.ScrollTrigger?.refresh();
       },
     });
-    gsap.to(".hero__title", { opacity: 1, y: 0, duration: 1, delay: 0.3 });
+    gsap.to(heroChars, { yPercent: 0, duration: 1, ease: "power3.out", stagger: 0.04, delay: 0.3 });
   };
   const skip = () => finish();
 
@@ -290,11 +326,98 @@ function setupBackToTop() {
   update();
 }
 
+// Hero background: grey vertical lines that wave slowly and light up near the
+// mouse. Drawn on a canvas; with reduced motion it is drawn once, static.
+function setupHeroLines() {
+  const hero = document.getElementById("hero");
+  const canvas = document.createElement("canvas");
+  canvas.className = "hero__lines";
+  canvas.setAttribute("aria-hidden", "true");
+  hero.prepend(canvas);
+  const ctx = canvas.getContext("2d");
+
+  const GAP = 18;          // px between lines
+  const STEP = 12;         // px between points of each line
+  const AMPLITUDE = 10;    // px of horizontal wave
+  const GLOW_RADIUS = 140; // px around the mouse that lights up
+  let width = 0, height = 0;
+  // Smoothed mouse position and glow strength (0 = mouse away, 1 = over hero).
+  const mouse = { x: 0, y: 0, targetX: 0, targetY: 0, glow: 0, targetGlow: 0 };
+
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    width = hero.clientWidth;
+    height = hero.clientHeight;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function linePath(baseX, i, t) {
+    ctx.beginPath();
+    for (let y = -STEP; y <= height + STEP; y += STEP) {
+      const x = baseX + Math.sin(y * 0.006 + t + i * 0.18) * AMPLITUDE;
+      y === -STEP ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+  }
+
+  function draw(t) {
+    ctx.clearRect(0, 0, width, height);
+    ctx.lineWidth = 1;
+    for (let i = 0, x = GAP / 2; x < width; i++, x += GAP) {
+      linePath(x, i, t);
+      ctx.strokeStyle = "rgb(140 140 150 / 0.18)";
+      ctx.stroke();
+
+      // Lit part: strength falls off with horizontal distance to the mouse,
+      // and a vertical gradient keeps it bright only around the mouse height.
+      const near = Math.exp(-(((x - mouse.x) / GLOW_RADIUS) ** 2)) * mouse.glow;
+      if (near < 0.02) continue;
+      const g = ctx.createLinearGradient(0, mouse.y - GLOW_RADIUS * 2, 0, mouse.y + GLOW_RADIUS * 2);
+      g.addColorStop(0, "rgb(236 236 241 / 0)");
+      g.addColorStop(0.5, `rgb(236 236 241 / ${0.85 * near})`);
+      g.addColorStop(1, "rgb(236 236 241 / 0)");
+      ctx.strokeStyle = g;
+      ctx.lineWidth = 1 + near;
+      ctx.stroke();
+      ctx.lineWidth = 1;
+    }
+  }
+
+  resize();
+  window.addEventListener("resize", () => { resize(); if (reduceMotion) draw(0); });
+  if (reduceMotion) { draw(0); return; }
+
+  hero.addEventListener("pointermove", (e) => {
+    const r = hero.getBoundingClientRect();
+    mouse.targetX = e.clientX - r.left;
+    mouse.targetY = e.clientY - r.top;
+    mouse.targetGlow = 1;
+  });
+  hero.addEventListener("pointerleave", () => { mouse.targetGlow = 0; });
+
+  // Only animate while the hero is on screen.
+  let visible = true;
+  new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; }).observe(hero);
+
+  function frame(now) {
+    if (visible) {
+      mouse.x += (mouse.targetX - mouse.x) * 0.12;
+      mouse.y += (mouse.targetY - mouse.y) * 0.12;
+      mouse.glow += (mouse.targetGlow - mouse.glow) * 0.08;
+      draw(now * 0.0004);
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
 // Content first, effects after: the letter-split and scroll effects need the
 // text from info.json to already be in the DOM.
 async function boot() {
   await Promise.all([initInfo(), initProjects()]);
   setupBackToTop();
+  setupHeroLines();
   playIntro();
 
   if (!reduceMotion && window.gsap && window.ScrollTrigger) {
