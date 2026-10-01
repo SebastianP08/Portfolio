@@ -130,8 +130,25 @@ function renderInfo(info) {
     .join("");
 
   document.getElementById("skills-title").textContent = info.skills.titulo;
+  // Optional intro sentence: add "frase" to skills in info.json to show it.
+  const lead = document.getElementById("skills-lead");
+  lead.textContent = info.skills.frase ?? "";
+  lead.hidden = !info.skills.frase;
+  // Each skill can have an optional "imagen" in info.json; until then a
+  // gradient placeholder fills the hover background.
   skillsGrid.innerHTML = info.skills.items
-    .map((s) => `<div class="skill"><h3>${esc(s.titulo)}</h3><p>${esc(s.texto)}</p></div>`)
+    .map((s, i) => {
+      const media = s.imagen
+        ? `<div class="skill__img" style="--img:url('${esc(s.imagen)}')"></div>`
+        : `<div class="skill__img skill__img--placeholder"></div>`;
+      return `
+      <article class="skill" tabindex="0">
+        <div class="skill__bg" aria-hidden="true">${media}</div>
+        <span class="skill__num" aria-hidden="true">${String(i + 1).padStart(2, "0")}</span>
+        <h3>${esc(s.titulo)}</h3>
+        <p>${esc(s.texto)}</p>
+      </article>`;
+    })
     .join("");
 
   const c = info.contacto;
@@ -412,6 +429,43 @@ function setupHeroLines() {
   requestAnimationFrame(frame);
 }
 
+// Skills: on wide screens the section is pinned and its columns slide
+// horizontally while scrolling down. Below 900px they stay stacked.
+// gsap.matchMedia() undoes everything it created when the breakpoint changes.
+function setupSkillsScroll() {
+  const section = document.getElementById("skills");
+  const track = document.getElementById("skills-track");
+  const mm = gsap.matchMedia();
+
+  mm.add("(min-width: 900px)", () => {
+    section.classList.add("skills--horizontal");
+    const distance = () => track.scrollWidth - window.innerWidth;
+    const slide = gsap.to(track, {
+      x: () => -distance(),
+      ease: "none",
+      scrollTrigger: {
+        trigger: section, start: "top top", end: () => "+=" + distance(),
+        pin: true, scrub: 1, invalidateOnRefresh: true,
+      },
+    });
+    // Each column's content rises in as the column enters from the right.
+    gsap.utils.toArray(".skill").forEach((skill) => {
+      gsap.from(skill.querySelectorAll(".skill__num, h3, p"), {
+        opacity: 0, y: 40, duration: 0.8, ease: "power3.out", stagger: 0.08,
+        scrollTrigger: {
+          trigger: skill, containerAnimation: slide, start: "left 85%",
+          toggleActions: "play none none reverse",
+        },
+      });
+    });
+    return () => section.classList.remove("skills--horizontal");
+  });
+
+  mm.add("(max-width: 899px)", () => {
+    revealOnScroll(".skill");
+  });
+}
+
 // Content first, effects after: the letter-split and scroll effects need the
 // text from info.json to already be in the DOM.
 async function boot() {
@@ -422,7 +476,8 @@ async function boot() {
 
   if (!reduceMotion && window.gsap && window.ScrollTrigger) {
     revealOnScroll([".panels__row", ".about__media", ".filters", ".contact p"]);
-    lettersFadeIn(".about h2, .about p, .projects h2, .skills h2, .skill h3, .skill p");
+    lettersFadeIn(".about h2, .about p, .projects h2, .skills h2");
+    setupSkillsScroll();
     ScrollTrigger.create({
       trigger: "#contact", start: "top 70%", once: true,
       onEnter: () => {
