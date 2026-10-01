@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gestión | Portafolio</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="gestion.css" />
+</head>
+<body class="manage-page">
+  <div class="manage-layout">
+    <aside class="sidebar">
+      <h2 class="sidebar__title">Gestión</h2>
+      <nav aria-label="Vistas">
+        <ul class="sidebar__list">
+          <li><a href="#" class="sidebar__item" data-view="list">Mostrar todos</a></li>
+          <li><a href="#" class="sidebar__item" data-view="create">Crear</a></li>
+          <li><a href="#" class="sidebar__item" data-view="read">Leer</a></li>
+          <li><a href="#" class="sidebar__item" data-view="update">Actualizar</a></li>
+          <li><a href="#" class="sidebar__item" data-view="delete">Eliminar</a></li>
+        </ul>
+      </nav>
+      <div class="sidebar__footer">
+        <button type="button" id="btn-export" class="btn btn--accent">Exportar JSON</button>
+        <button type="button" id="btn-reset" class="btn btn--danger">Volver al JSON original</button>
+        <a href="index.html" class="sidebar__back">&larr; Ver landing</a>
+      </div>
+    </aside>
+
+    <main class="manage-content">
+      <h1>Gestión de proyectos</h1>
+      <p id="storage-note" class="note" hidden></p>
+      <p id="load-error" class="note note--error" hidden></p>
+
+      <section class="view" data-view="list" id="view-list" hidden></section>
+
+      <section class="view" data-view="create" id="view-create" hidden>
+        <h2>Crear proyecto</h2>
+        <div id="create-slot"></div>
+        <p id="create-message" class="note" hidden></p>
+      </section>
+
+      <section class="view" data-view="read" id="view-read" hidden>
+        <h2>Leer proyecto</h2>
+        <form id="read-form" class="project-form">
+          <label for="read-id">Id del proyecto</label>
+          <input type="number" id="read-id" min="1" placeholder="Ej: 3" required />
+          <button type="submit" class="btn btn--accent">Buscar</button>
+        </form>
+        <p id="read-message" class="note note--error" hidden></p>
+        <div id="read-result" class="read-result"></div>
+      </section>
+
+      <section class="view" data-view="update" id="view-update" hidden>
+        <h2>Actualizar proyecto</h2>
+        <div id="update-list" class="row-list"></div>
+        <div id="update-slot"></div>
+        <p id="update-message" class="note" hidden></p>
+      </section>
+
+      <section class="view" data-view="delete" id="view-delete" hidden>
+        <h2>Eliminar proyecto</h2>
+        <div id="delete-list" class="row-list"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- One form shared by Create and Update (cloned into each view). -->
+  <template id="tpl-form">
+    <form class="project-form">
+      <label>Nombre <input type="text" name="nombre" required /></label>
+      <label>Categoría <input type="text" name="categoria" list="dl-categories" required /></label>
+      <label>Herramienta <input type="text" name="herramienta" list="dl-tools" required /></label>
+      <label>Imagen (ruta, ej: img/archivo.png) <input type="text" name="imagen" placeholder="img/nombre.png" /></label>
+      <label>Descripción <textarea name="descripcion" rows="4" required></textarea></label>
+      <label>Horas invertidas <input type="number" name="horasInvertidas" min="0" required /></label>
+      <label>Etapas (separadas por coma) <input type="text" name="etapas" placeholder="Boceto, Modelado, Render" /></label>
+      <label>Enlace (opcional) <input type="url" name="enlace" placeholder="https://..." /></label>
+      <label class="check"><input type="checkbox" name="enProceso" /> En proceso</label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn--accent" data-submit>Guardar</button>
+        <button type="button" class="btn" data-cancel hidden>Cancelar</button>
+      </div>
+    </form>
+  </template>
+  <datalist id="dl-categories"></datalist>
+  <datalist id="dl-tools"></datalist>
+
+  <script src="store.js"></script>
+  <script src="gestion.js"></script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sebastian Aguilar | Portafolio</title>
+  <meta name="description" content="Portafolio de Sebastian Aguilar: 3D, animación, desarrollo web y UI/UX." />
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="intro" class="intro" aria-hidden="true">
+    <!-- Name here and in the navbar/hero is a fallback; info.json overrides it. -->
+    <p class="intro__name" id="intro-name" data-text="SEBASTIAN AGUILAR"></p>
+    <span class="intro__line"></span>
+  </div>
+
+  <header class="navbar">
+    <a href="#hero" class="navbar__logo" id="nav-name">SEBASTIAN AGUILAR</a>
+    <nav aria-label="Main">
+      <a href="#panels">Proyectos</a>
+      <a href="#about">About</a>
+      <a href="#skills">Skills</a>
+      <a href="#contact">Contacto</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="hero" class="hero" aria-labelledby="hero-title">
+      <h1 id="hero-title" class="hero__title">Sebastian <span class="hero__surname">Aguilar</span></h1>
+    </section>
+
+    <section id="panels" class="panels" aria-label="Proyectos destacados">
+      <h2 class="visually-hidden">Proyectos destacados</h2>
+      <div class="panels__row" id="panels-row"></div>
+    </section>
+
+    <section id="about" class="about" aria-labelledby="about-title">
+      <div class="about__text">
+        <h2 id="about-title"></h2>
+        <div id="about-body"></div>
+      </div>
+      <div class="about__media" role="img" aria-label="Espacio para foto o render (placeholder)"></div>
+    </section>
+
+    <section id="projects" class="projects" aria-labelledby="projects-title">
+      <h2 id="projects-title">Proyectos</h2>
+      <div class="filters" id="filters" role="group" aria-label="Filtrar por categoría"></div>
+      <div class="cards" id="cards"></div>
+    </section>
+
+    <section id="skills" class="skills" aria-labelledby="skills-title">
+      <h2 id="skills-title"></h2>
+      <div class="skills__grid" id="skills-grid"></div>
+    </section>
+
+    <section id="contact" class="contact" aria-labelledby="contact-title">
+      <h2 id="contact-title" class="contact__phrase"></h2>
+      <p id="contact-links" class="contact__links"></p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <small id="footer-text"></small>
+  </footer>
+
+  <button type="button" id="back-to-top" class="back-to-top" aria-label="Volver al inicio" hidden>&uarr;</button>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="store.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
