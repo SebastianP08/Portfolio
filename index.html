@@ -40,27 +40,30 @@
         <h2 id="about-title"></h2>
         <div id="about-body"></div>
       </div>
-      <div class="about__media" role="img" aria-label="Espacio para foto o render (placeholder)"></div>
+      <div class="about__media" id="about-media" role="img" aria-label="Espacio para foto o render (placeholder)"></div>
     </section>
 
-    <section id="projects" class="projects" aria-labelledby="projects-title">
-      <h2 id="projects-title">Proyectos</h2>
-      <div class="filters" id="filters" role="group" aria-label="Filtrar por categoría"></div>
-      <div class="cards" id="cards"></div>
-      <div class="show-more">
-        <button type="button" id="show-more" class="btn-more" hidden>Mostrar más</button>
-      </div>
-    </section>
+    <!-- On wide screens script.js turns this into one horizontal track: at the
+         end of Projects the page stops scrolling down and slides to Skills. -->
+    <div class="hscroll" id="hscroll">
+      <div class="hscroll__track" id="hscroll-track">
+        <section id="projects" class="projects" aria-labelledby="projects-title">
+          <h2 id="projects-title">Proyectos</h2>
+          <div class="filters" id="filters" role="group" aria-label="Filtrar por categoría"></div>
+          <div class="cards" id="cards"></div>
+        </section>
 
-    <section id="skills" class="skills" aria-labelledby="skills-title">
-      <div class="skills__track" id="skills-track">
-        <div class="skills__intro">
-          <h2 id="skills-title"></h2>
-          <p id="skills-lead" class="skills__lead" hidden></p>
-        </div>
-        <div class="skills__grid" id="skills-grid"></div>
+        <section id="skills" class="skills" aria-labelledby="skills-title">
+          <div class="skills__track" id="skills-track">
+            <div class="skills__intro">
+              <h2 id="skills-title"></h2>
+              <p id="skills-lead" class="skills__lead" hidden></p>
+            </div>
+            <div class="skills__grid" id="skills-grid"></div>
+          </div>
+        </section>
       </div>
-    </section>
+    </div>
 
     <section id="contact" class="contact" aria-labelledby="contact-title">
       <h2 id="contact-title" class="contact__phrase"></h2>

@@ -4,6 +4,7 @@
   "universidad": "Universidad El Bosque",
   "about": {
     "titulo": "About me",
+    "foto": "img/Foto-perfil.png",
     "parrafos": [
       "Soy estudiante de la Universidad El Bosque. Me apasionan el *3D* y la *animación*, y también la programación y la creación de *páginas web*. Durante la carrera he desarrollado proyectos que muestro aquí.",
       "Busco colaborar con marcas, empresas y estudios que quieran diversidad en el área digital."
@@ -12,10 +13,10 @@
   "skills": {
     "titulo": "Skills",
     "items": [
-      { "titulo": "3D", "texto": "Creación de elementos y personajes 3D." },
-      { "titulo": "Web", "texto": "Programación de páginas web." },
-      { "titulo": "UI / UX", "texto": "Habilidades en diseño de interfaces y experiencia de usuario." },
-      { "titulo": "Datos y marcas", "texto": "Habilidades en análisis de datos y de marcas." }
+      { "titulo": "3D", "texto": "Creación de elementos y personajes 3D.", "imagen": "img/skill-3D.png" },
+      { "titulo": "Web", "texto": "Programación de páginas web.", "imagen": "img/skill-web.png", "posicion": "20% 50%" },
+      { "titulo": "UI / UX", "texto": "Habilidades en diseño de interfaces y experiencia de usuario.", "imagen": "img/skill-ui-ux.png", "posicion": "88% 50%" },
+      { "titulo": "Datos y marcas", "texto": "Habilidades en análisis de datos y de marcas.", "imagen": "img/skill-datos.png" }
     ]
   },
   "contacto": {

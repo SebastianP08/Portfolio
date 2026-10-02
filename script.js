@@ -30,8 +30,11 @@ function renderPanels() {
     .map((p) => {
       const href = p.enlace ? esc(p.enlace) : "#projects";
       const external = p.enlace ? ' target="_blank" rel="noopener"' : "";
+      // Optional "posicionPanel" (e.g. "68% 50%") frames the subject inside the narrow panel.
+      const pos = p.posicionPanel ? `;--pos:${esc(p.posicionPanel)}` : "";
       return `
-      <a class="panel" href="${href}"${external} style="--img:url('${esc(p.imagen)}')" aria-label="${esc(p.nombre)}">
+      <a class="panel" href="${href}"${external} style="--img:url('${esc(p.imagen)}')${pos}" aria-label="${esc(p.nombre)}">
+        <div class="panel__img" aria-hidden="true"></div>
         <div class="panel__label"><strong>${esc(p.nombre)}</strong><span>${esc(p.categoria)}</span></div>
       </a>`;
     })
@@ -52,30 +55,13 @@ function cardHtml(p) {
       </article>`;
 }
 
-// Cards start with PAGE_SIZE projects of the current filter; "Mostrar más"
-// appends the next PAGE_SIZE. Appending (instead of re-rendering) keeps the
-// cards already on screen from replaying their reveal.
-const PAGE_SIZE = 4;
-const showMoreBtn = document.getElementById("show-more");
-let filteredProjects = [];
-let shownCount = 0;
-
-function showNextCards() {
-  const next = filteredProjects.slice(shownCount, shownCount + PAGE_SIZE);
-  cardsEl.insertAdjacentHTML("beforeend", next.map(cardHtml).join(""));
-  shownCount += next.length;
-  showMoreBtn.hidden = shownCount >= filteredProjects.length;
+// Every project of the current filter is shown at once; the small/small/big
+// row pattern comes from the card's position in the grid (style.css).
+function renderCards(category) {
+  const filtered = category === "Todos" ? projects : projects.filter((p) => p.categoria === category);
+  cardsEl.innerHTML = filtered.map(cardHtml).join("");
   revealCards();
 }
-
-function renderCards(category) {
-  filteredProjects = category === "Todos" ? projects : projects.filter((p) => p.categoria === category);
-  shownCount = 0;
-  cardsEl.innerHTML = "";
-  showNextCards();
-}
-
-showMoreBtn.addEventListener("click", showNextCards);
 
 function renderFilters() {
   const categories = ["Todos", ...new Set(projects.map((p) => p.categoria))];
@@ -94,7 +80,6 @@ function showProjectsError(error) {
   console.error("Could not load mis-proyectos.json:", error);
   cardsEl.innerHTML = `<p class="projects__error">No se pudieron cargar los proyectos. ${SERVER_HINT}</p>`;
   panelsRow.innerHTML = "";
-  showMoreBtn.hidden = true;
 }
 
 async function initProjects() {
@@ -128,18 +113,27 @@ function renderInfo(info) {
   document.getElementById("about-body").innerHTML = info.about.parrafos
     .map((p) => `<p>${withEmphasis(p)}</p>`)
     .join("");
+  // Optional "foto" in info.json replaces the gradient placeholder.
+  if (info.about.foto) {
+    const media = document.getElementById("about-media");
+    media.removeAttribute("role");
+    media.removeAttribute("aria-label");
+    media.classList.add("about__media--photo");
+    media.innerHTML = `<img src="${esc(info.about.foto)}" alt="Foto de ${esc(fullName)}" />`;
+  }
 
   document.getElementById("skills-title").textContent = info.skills.titulo;
   // Optional intro sentence: add "frase" to skills in info.json to show it.
   const lead = document.getElementById("skills-lead");
   lead.textContent = info.skills.frase ?? "";
   lead.hidden = !info.skills.frase;
-  // Each skill can have an optional "imagen" in info.json; until then a
-  // gradient placeholder fills the hover background.
+  // Each skill can have an optional "imagen" in info.json (and "posicion" to
+  // pick the visible part); until then a gradient placeholder fills the hover background.
   skillsGrid.innerHTML = info.skills.items
     .map((s, i) => {
+      const pos = s.posicion ? `;--pos:${esc(s.posicion)}` : "";
       const media = s.imagen
-        ? `<div class="skill__img" style="--img:url('${esc(s.imagen)}')"></div>`
+        ? `<div class="skill__img" style="--img:url('${esc(s.imagen)}')${pos}"></div>`
         : `<div class="skill__img skill__img--placeholder"></div>`;
       return `
       <article class="skill" tabindex="0">
@@ -341,7 +335,15 @@ function setupAnchorScroll() {
     const target = document.querySelector(link.getAttribute("href"));
     if (!target) return;
     e.preventDefault();
-    target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
+    const behavior = reduceMotion ? "auto" : "smooth";
+    // Inside the horizontal track #skills has no vertical position of its own:
+    // scroll to the point of the pin where the track has slid to it.
+    if (target.id === "skills" && hscrollTrigger) {
+      const offset = Math.min(target.offsetLeft, hscrollTrigger.end - hscrollTrigger.start);
+      window.scrollTo({ top: hscrollTrigger.start + offset, behavior });
+      return;
+    }
+    target.scrollIntoView({ behavior });
   });
 }
 
@@ -442,39 +444,54 @@ function setupHeroLines() {
   requestAnimationFrame(frame);
 }
 
-// Skills: on wide screens the section is pinned and its columns slide
-// horizontally while scrolling down. Below 900px they stay stacked.
+// Projects + Skills: on wide screens they sit side by side in one track.
+// When the bottom of Projects reaches the bottom of the screen, the block is
+// pinned and scrolling down slides the track left, so Skills comes in from
+// the right with no vertical gap. Below 900px everything stays stacked.
 // gsap.matchMedia() undoes everything it created when the breakpoint changes.
-function setupSkillsScroll() {
-  const section = document.getElementById("skills");
-  const track = document.getElementById("skills-track");
+let hscrollTrigger = null; // used by setupAnchorScroll() to reach #skills
+
+function setupHorizontalScroll() {
+  const wrap = document.getElementById("hscroll");
+  const track = document.getElementById("hscroll-track");
+  const skills = document.getElementById("skills");
   const mm = gsap.matchMedia();
 
   mm.add("(min-width: 900px)", () => {
-    section.classList.add("skills--horizontal");
+    wrap.classList.add("hscroll--on");
+    skills.classList.add("skills--horizontal");
     const distance = () => track.scrollWidth - window.innerWidth;
     const slide = gsap.to(track, {
       x: () => -distance(),
       ease: "none",
       scrollTrigger: {
-        trigger: section, start: "top top", end: () => "+=" + distance(),
+        trigger: wrap, start: "bottom bottom", end: () => "+=" + distance(),
         pin: true, scrub: 1, invalidateOnRefresh: true,
       },
     });
-    // Each column's content rises in as the column enters from the right.
-    gsap.utils.toArray(".skill").forEach((skill) => {
-      gsap.from(skill.querySelectorAll(".skill__num, h3, p"), {
+    hscrollTrigger = slide.scrollTrigger;
+
+    // The Skills title and each column's content rise in as they enter from the right.
+    const rise = (targets, trigger) =>
+      gsap.from(targets, {
         opacity: 0, y: 40, duration: 0.8, ease: "power3.out", stagger: 0.08,
         scrollTrigger: {
-          trigger: skill, containerAnimation: slide, start: "left 85%",
+          trigger, containerAnimation: slide, start: "left 85%",
           toggleActions: "play none none reverse",
         },
       });
-    });
-    return () => section.classList.remove("skills--horizontal");
+    rise(skills.querySelectorAll(".skills__intro > *"), skills);
+    gsap.utils.toArray(".skill").forEach((skill) => rise(skill.querySelectorAll(".skill__num, h3, p"), skill));
+
+    return () => {
+      hscrollTrigger = null;
+      wrap.classList.remove("hscroll--on");
+      skills.classList.remove("skills--horizontal");
+    };
   });
 
   mm.add("(max-width: 899px)", () => {
+    lettersFadeIn(".skills h2");
     revealOnScroll(".skill");
   });
 }
@@ -490,8 +507,8 @@ async function boot() {
 
   if (!reduceMotion && window.gsap && window.ScrollTrigger) {
     revealOnScroll([".panels__row", ".about__media", ".filters", ".contact p"]);
-    lettersFadeIn(".about h2, .about p, .projects h2, .skills h2");
-    setupSkillsScroll();
+    lettersFadeIn(".about h2, .about p, .projects h2");
+    setupHorizontalScroll();
     ScrollTrigger.create({
       trigger: "#contact", start: "top 70%", once: true,
       onEnter: () => {
@@ -499,6 +516,10 @@ async function boot() {
         if (phrase.dataset.text) decryptText(phrase);
       },
     });
+    // Triggers below the pinned track were created before it: recompute them
+    // in page order so they account for the pin's extra scroll length.
+    ScrollTrigger.sort();
+    ScrollTrigger.refresh();
   }
 }
 

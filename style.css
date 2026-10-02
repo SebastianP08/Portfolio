@@ -66,26 +66,46 @@ body.is-locked { overflow: hidden; }
 .panel {
   position: relative; flex: 1; margin-inline: -1px;
   transform: skewX(calc(var(--skew) * -1));
-  background: var(--bg-soft) var(--img) center / cover no-repeat;
+  background: #000;
   border-inline: 2px solid var(--bg);
   transition: flex 0.5s ease;
   cursor: pointer; overflow: hidden;
 }
-/* Dark overlay keeps the label readable over any image. */
+/* The image lives in its own layer skewed the other way, so it is not
+   distorted by the panel. It is --shift wider per side to fill the slanted
+   edges. --pos (posicionPanel in mis-proyectos.json) picks the visible part.
+   It only fills the top 60% (closer to the images' real size, so sharper) and
+   fades into the black band that holds the title. */
+.panel__img {
+  position: absolute; inset: 0 calc(var(--shift) * -1) 40%;
+  transform: skewX(var(--skew));
+  background: var(--img) var(--pos, center) / cover no-repeat;
+  -webkit-mask-image: linear-gradient(to bottom, #000 75%, transparent);
+  mask-image: linear-gradient(to bottom, #000 75%, transparent);
+  transition: filter 0.5s ease;
+}
+/* FromSoftware-style: panels start grey and only the active one gets colour.
+   Touch screens have no hover, so there they stay in colour. */
+@media (hover: hover) {
+  .panel__img { filter: grayscale(1) brightness(0.8); }
+  .panel:hover .panel__img, .panel:focus-visible .panel__img { filter: none; }
+}
+/* Dark overlay for the label: only needed on mobile, where the image covers
+   the whole (short) panel instead of leaving a black band. */
 .panel::before {
-  content: ""; position: absolute; inset: 0;
-  /* Only the bottom third is darkened, so the image stays clean above the label. */
+  content: ""; position: absolute; inset: 0; z-index: 1; display: none;
   background: linear-gradient(to top, rgb(0 0 0 / 0.85), transparent 35%);
 }
 .panel:hover, .panel:focus-visible { flex: 2.6; }
 .panel__label {
-  position: absolute; inset: auto 1.5rem 2rem 1.5rem;
+  position: absolute; inset: auto 1.5rem 2rem 1.5rem; z-index: 2;
   transform: skewX(var(--skew));
 }
 /* 8 panels share the width, so the label is compact and wraps instead of overflowing. */
-.panel__label strong { display: block; font-family: var(--font-title); font-size: clamp(0.8rem, 1.1vw, 1.1rem); text-transform: uppercase; line-height: 1.2; }
-.panel__label span { color: var(--text); opacity: 0.75; font-size: 0.75rem; }
-.panel__label { inset: auto 1rem 2rem 1rem; }
+.panel__label strong { display: block; font-family: var(--font-title); font-size: clamp(0.95rem, 1.5vw, 1.5rem); text-transform: uppercase; line-height: 1.15; margin-bottom: 0.4rem; }
+.panel__label span { color: var(--accent); font-size: 0.8rem; }
+/* Title sits right under the image, at the top of the black band. */
+.panel__label { inset: 64% 1rem auto 1rem; }
 /* Near the bottom, the skew pulls the first panel's edge left by another
    --shift on top of the row's own -shift offset, so its label needs 2x
    --shift of room or its start is cut off. */
@@ -106,6 +126,15 @@ body.is-locked { overflow: hidden; }
 .char { will-change: opacity, filter; }
 .about p { color: var(--muted); font-size: 1.1rem; margin-bottom: 1rem; max-width: 55ch; }
 .about__media { aspect-ratio: 4 / 5; border-radius: 6px; background: linear-gradient(160deg, hsl(200 55% 32%), hsl(260 45% 12%)); }
+/* Profile photo: its pure-black background fades into the page instead of
+   showing a hard edge against --bg. */
+.about__media--photo { background: none; }
+.about__media img {
+  display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 40%;
+  /* closest-side: fully transparent right at the edges of the box. */
+  -webkit-mask-image: radial-gradient(closest-side, #000 65%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 65%, transparent 100%);
+}
 @media (max-width: 700px) { .about { grid-template-columns: 1fr; } }
 
 /* Back to top */
@@ -125,9 +154,35 @@ body.is-locked { overflow: hidden; }
   padding: 0.4rem 0.9rem; border-radius: 999px; cursor: pointer; font: inherit;
 }
 .filters button[aria-pressed="true"] { background: var(--accent); color: #111; border-color: var(--accent); }
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
+/* Rows of 3 on a 7-column grid (2:2:3): row A is small · small · big and
+   row B mirrors it (big · small · small), repeating every 6 cards. The image
+   keeps its 4/3 ratio, so the big card is also taller. */
+.cards { display: grid; grid-template-columns: repeat(7, 1fr); align-items: start; gap: 1rem; }
+.card:nth-child(6n + 1), .card:nth-child(6n + 2),
+.card:nth-child(6n + 5), .card:nth-child(6n + 6) { grid-column: span 2; }
+.card:nth-child(6n + 3), .card:nth-child(6n + 4) { grid-column: span 3; }
 .card { background: var(--bg-soft); border-radius: 6px; overflow: hidden; }
-.card { display: flex; flex-direction: column; }
+.card {
+  position: relative; display: flex; flex-direction: column;
+  transition: filter 0.6s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.5s ease;
+}
+/* Focus hover: the active card grows above its neighbours (small cards more
+   than the big one) and the others go grey and dark. :has() keeps the gaps
+   between cards from dimming everything. */
+@media (hover: hover) {
+  .cards:has(.card:hover, .card:focus-within) .card:not(:hover, :focus-within) {
+    filter: grayscale(1) brightness(0.4);
+  }
+  .card:hover, .card:focus-within {
+    z-index: 2; transform: scale(1.1); box-shadow: 0 24px 48px rgb(0 0 0 / 0.55);
+  }
+  .card:nth-child(6n + 3):hover, .card:nth-child(6n + 3):focus-within,
+  .card:nth-child(6n + 4):hover, .card:nth-child(6n + 4):focus-within { transform: scale(1.04); }
+}
+@media (max-width: 760px) {
+  .cards { grid-template-columns: 1fr; }
+  .cards .card { grid-column: auto; }
+}
 .card__media { overflow: hidden; }
 .card__img {
   display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--bg-soft);
@@ -196,16 +251,20 @@ body.is-locked { overflow: hidden; }
 }
 .skill p { color: var(--muted); max-width: 32ch; }
 
-/* Hover background: uncovered from the bottom up, darkened so text stays readable. */
+/* Hover background: uncovered from the bottom up. Like the diagonal panels it
+   only covers the top 75% and fades out, leaving the text at the bottom on a
+   clean band; it is darkened so the number and title over it stay readable. */
 .skill__bg {
-  position: absolute; inset: 0; z-index: -1; overflow: hidden;
+  position: absolute; inset: 0 0 25% 0; z-index: -1; overflow: hidden;
   clip-path: inset(100% 0 0 0);
+  -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent);
+  mask-image: linear-gradient(to bottom, #000 70%, transparent);
   transition: clip-path 0.9s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.skill__bg::after { content: ""; position: absolute; inset: 0; background: rgb(0 0 0 / 0.6); }
+.skill__bg::after { content: ""; position: absolute; inset: 0; background: rgb(0 0 0 / 0.5); }
 .skill__img {
   width: 100%; height: 100%;
-  background: var(--img) center / cover no-repeat;
+  background: var(--img) var(--pos, center) / cover no-repeat;
   transform: scale(1.1); transition: transform 1.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 /* Placeholder until each skill gets an "imagen" in info.json. */
@@ -213,11 +272,31 @@ body.is-locked { overflow: hidden; }
 .skill:hover .skill__bg, .skill:focus-visible .skill__bg { clip-path: inset(0); }
 .skill:hover .skill__img, .skill:focus-visible .skill__img { transform: scale(1); }
 .skill:hover p, .skill:focus-visible p { color: var(--text); }
+/* The column also grows a little above its neighbours. Scaling (not a wider
+   column) keeps the pinned horizontal scroll's distance unchanged. */
+@media (hover: hover) {
+  .skill { transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.5s ease; }
+  .skill:hover, .skill:focus-visible {
+    z-index: 2; transform: scale(1.05); box-shadow: 0 0 60px rgb(0 0 0 / 0.6);
+  }
+}
 /* Touch screens have no hover: show the background from the start. */
 @media (hover: none) {
   .skill__bg { clip-path: inset(0); }
   .skill__img { transform: none; }
 }
+
+/* Horizontal track (wide screens, .hscroll--on set by script.js): Projects
+   and Skills side by side. Projects keeps its 1200px content centred in a
+   full-width slide; Skills sits at the bottom so both end on the same line
+   when the track gets pinned. */
+.hscroll { overflow: clip; }
+.hscroll--on .hscroll__track { display: flex; align-items: flex-end; width: max-content; }
+.hscroll--on .projects {
+  flex-shrink: 0; width: 100vw; min-height: 100vh; max-width: none;
+  padding-inline: max(1.25rem, calc((100vw - 1200px) / 2 + 1.25rem));
+}
+.hscroll--on .skills { flex-shrink: 0; }
 
 /* Horizontal mode (wide screens, set by script.js) */
 .skills--horizontal { height: 100vh; overflow: hidden; }
@@ -241,7 +320,10 @@ body.is-locked { overflow: hidden; }
 @media (max-width: 700px) {
   .panels__row { flex-direction: column; margin-inline: 0; }
   .panel { flex: 1; margin: 0; transform: none; border-inline: 0; border-block: 2px solid var(--bg); }
-  .panel__label, .panel:first-child .panel__label { transform: none; left: 1rem; }
+  .panel__img { inset: 0; transform: none; -webkit-mask-image: none; mask-image: none; }
+  .panel::before { display: block; background: linear-gradient(to top, rgb(0 0 0 / 0.9), rgb(0 0 0 / 0.5) 45%, transparent 80%); }
+  .panel__label strong { font-size: 0.95rem; margin-bottom: 0.1rem; }
+  .panel__label, .panel:first-child .panel__label { transform: none; inset: auto 1rem 1rem 1rem; }
   .panel:hover, .panel:focus-visible { flex: 1; }
   .navbar nav { gap: 0.8rem; font-size: 0.8rem; }
 }
@@ -249,17 +331,8 @@ body.is-locked { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .panel { transition: none; }
-  .card__img { transition: none; }
+  .card, .card__img, .panel__img { transition: none; }
+  .card:hover, .card:focus-within, .skill:hover, .skill:focus-visible { transform: none !important; }
   .card:hover .card__img { transform: none; }
   .skill__bg, .skill__img { transition: none; }
 }
-
-/* "Mostrar más" under the project cards */
-.show-more { display: flex; justify-content: center; margin-top: 2rem; }
-.btn-more {
-  font: inherit; font-weight: 600; cursor: pointer;
-  padding: 0.7rem 1.8rem; border-radius: 999px;
-  border: 1px solid var(--accent); background: none; color: var(--accent);
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
-.btn-more:hover, .btn-more:focus-visible { background: var(--accent); color: #111; }
