@@ -189,6 +189,10 @@ body.is-locked { overflow: hidden; }
   transition: transform 0.8s cubic-bezier(0.19, 1, 0.22, 1);
 }
 .card:hover .card__img { transform: scale(1.08); }
+/* "imagenCompleta" in mis-proyectos.json: the whole image at its own ratio
+   (e.g. a wide web capture whose sides the 4/3 crop would cut). */
+.card__img--full { aspect-ratio: auto; height: auto; }
+.card__media[data-open] { cursor: pointer; }
 
 /* Cards reveal (only when script.js adds .js-reveal): the image is uncovered
    from the top-left corner while zooming out, then the text comes in.
@@ -226,6 +230,39 @@ body.is-locked { overflow: hidden; }
   color: var(--accent); font-size: 0.9rem; border-bottom: 1px solid transparent;
 }
 .card__link:hover, .card__link:focus-visible { border-bottom-color: var(--accent); }
+/* Projects that open the pop-up use a <button> that looks like the link. */
+button.card__link {
+  background: none; border: 0; border-bottom: 1px solid transparent;
+  padding: 0.5rem 0 0; font: inherit; font-size: 0.9rem; cursor: pointer;
+}
+
+/* Project pop-up (<dialog>, opened by setupProjectModal() in script.js):
+   media on the left, text on the right; stacked on narrow screens. */
+.modal {
+  width: min(1320px, 94vw); max-height: 90vh; margin: auto; padding: 0;
+  border: 0; border-radius: 8px; overflow: auto;
+  background: var(--bg-soft); color: var(--text);
+}
+.modal[open] { display: grid; grid-template-columns: 2.4fr 1fr; animation: modal-in 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
+.modal::backdrop { background: rgb(0 0 0 / 0.8); }
+@keyframes modal-in { from { opacity: 0; transform: scale(0.96); } }
+.modal__media { display: grid; place-items: center; background: #000; min-height: 240px; }
+.modal__media video, .modal__media img { display: block; width: 100%; max-height: 90vh; object-fit: contain; }
+.modal__body { padding: 3.5rem 1.75rem 2rem; display: flex; flex-direction: column; align-items: flex-start; gap: 0.6rem; }
+.modal__body h2 { font-size: 1.4rem; line-height: 1.2; }
+.modal__desc { color: var(--muted); }
+.modal__close {
+  position: absolute; top: 0.75rem; right: 0.75rem; z-index: 1;
+  width: 2.5rem; height: 2.5rem; border-radius: 50%; border: 1px solid var(--accent);
+  background: var(--bg-soft); color: var(--accent); font-size: 1.4rem; line-height: 1; cursor: pointer;
+}
+.modal__close:hover, .modal__close:focus-visible { background: var(--accent); color: #111; }
+@media (max-width: 760px) {
+  .modal[open] { grid-template-columns: 1fr; }
+  .modal__media { min-height: 0; }
+  .modal__media video, .modal__media img { max-height: 55vh; }
+  .modal__body { padding: 1.25rem 1.25rem 1.75rem; }
+}
 .projects__error { grid-column: 1 / -1; color: var(--muted); border-left: 3px solid var(--accent); padding: 0.5rem 1rem; }
 .projects__error code { color: var(--text); }
 
@@ -332,6 +369,7 @@ body.is-locked { overflow: hidden; }
   html { scroll-behavior: auto; }
   .panel { transition: none; }
   .card, .card__img, .panel__img { transition: none; }
+  .modal[open] { animation: none; }
   .card:hover, .card:focus-within, .skill:hover, .skill:focus-visible { transform: none !important; }
   .card:hover .card__img { transform: none; }
   .skill__bg, .skill__img { transition: none; }

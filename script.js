@@ -24,16 +24,24 @@ const SERVER_HINT = `Abre la página con un servidor local (extensión Live Serv
 // Panels show only the projects marked "destacado" in mis-proyectos.json
 // (all 8 are too crowded); the cards below still list everything. If none
 // is marked, the first 5 are used.
+// What a click on a project does: a "video" opens the pop-up with it, an
+// "enlace" opens that site, and a project with neither opens the pop-up with
+// its image. [data-open] is handled by setupProjectModal().
+function opensModal(p) {
+  return Boolean(p.video) || !p.enlace;
+}
+
 function renderPanels() {
   const featured = projects.filter((p) => p.destacado);
   panelsRow.innerHTML = (featured.length ? featured : projects.slice(0, 5))
     .map((p) => {
-      const href = p.enlace ? esc(p.enlace) : "#projects";
-      const external = p.enlace ? ' target="_blank" rel="noopener"' : "";
+      const link = opensModal(p)
+        ? `href="#projects" data-open="${esc(p.id)}"`
+        : `href="${esc(p.enlace)}" target="_blank" rel="noopener"`;
       // Optional "posicionPanel" (e.g. "68% 50%") frames the subject inside the narrow panel.
       const pos = p.posicionPanel ? `;--pos:${esc(p.posicionPanel)}` : "";
       return `
-      <a class="panel" href="${href}"${external} style="--img:url('${esc(p.imagen)}')${pos}" aria-label="${esc(p.nombre)}">
+      <a class="panel" ${link} style="--img:url('${esc(p.imagen)}')${pos}" aria-label="${esc(p.nombre)}">
         <div class="panel__img" aria-hidden="true"></div>
         <div class="panel__label"><strong>${esc(p.nombre)}</strong><span>${esc(p.categoria)}</span></div>
       </a>`;
@@ -42,17 +50,65 @@ function renderPanels() {
 }
 
 function cardHtml(p) {
+  const modal = opensModal(p);
+  const open = modal ? ` data-open="${esc(p.id)}"` : "";
+  // Optional "imagenCompleta" shows the whole image instead of the 4/3 crop.
+  const full = p.imagenCompleta ? " card__img--full" : "";
+  const action = modal
+    ? `<button type="button" class="card__link"${open}>Ver proyecto</button>`
+    : `<a class="card__link" href="${esc(p.enlace)}" target="_blank" rel="noopener">Ver proyecto</a>`;
   return `
       <article class="card">
-        <div class="card__media"><img class="card__img" src="${esc(p.imagen)}" alt="${esc(p.nombre)}" loading="lazy" /></div>
+        <div class="card__media"${open}><img class="card__img${full}" src="${esc(p.imagen)}" alt="${esc(p.nombre)}" loading="lazy" /></div>
         <div class="card__body">
           ${p.enProceso ? '<span class="badge">En proceso</span>' : ""}
           <h3>${esc(p.nombre)}</h3>
           <p class="card__meta">${esc(p.categoria)} · ${esc(p.herramienta)}</p>
           <p class="card__desc">${esc(p.descripcion)}</p>
-          ${p.enlace ? `<a class="card__link" href="${esc(p.enlace)}" target="_blank" rel="noopener">Ver proyecto</a>` : ""}
+          ${action}
         </div>
       </article>`;
+}
+
+// Project pop-up: a native <dialog> (Esc, focus trap and backdrop for free)
+// with the project's video in loop, or its image, next to its text.
+function setupProjectModal() {
+  const modal = document.getElementById("project-modal");
+  const media = document.getElementById("modal-media");
+
+  function open(p) {
+    media.innerHTML = p.video
+      ? // Muted so autoplay is allowed; native controls give pause/play.
+        `<video src="${esc(p.video)}" poster="${esc(p.imagen)}" loop muted playsinline controls${reduceMotion ? "" : " autoplay"}></video>`
+      : `<img src="${esc(p.imagen)}" alt="${esc(p.nombre)}" />`;
+    document.getElementById("modal-badge").hidden = !p.enProceso;
+    document.getElementById("modal-title").textContent = p.nombre;
+    document.getElementById("modal-meta").textContent = `${p.categoria} · ${p.herramienta}`;
+    document.getElementById("modal-desc").textContent = p.descripcion;
+    document.body.classList.add("is-locked");
+    modal.showModal();
+  }
+
+  document.addEventListener("click", (e) => {
+    const trigger = e.target.closest("[data-open]");
+    if (!trigger) return;
+    const project = projects.find((p) => String(p.id) === trigger.dataset.open);
+    if (!project) return;
+    e.preventDefault();
+    open(project);
+  });
+
+  document.getElementById("modal-close").addEventListener("click", () => modal.close());
+  // A click on the backdrop lands on the <dialog> itself, not on its content.
+  modal.addEventListener("click", (e) => { if (e.target === modal) modal.close(); });
+  // Runs for the button, Esc and the backdrop: emptying the media stops the video.
+  // The event arrives a moment after closing, so skip it if another project
+  // was opened in between (it would empty that one's video).
+  modal.addEventListener("close", () => {
+    if (modal.open) return;
+    media.innerHTML = "";
+    document.body.classList.remove("is-locked");
+  });
 }
 
 // Every project of the current filter is shown at once; the small/small/big
@@ -330,6 +386,8 @@ function playIntro() {
 // "scroll-behavior: smooth" breaks ScrollTrigger's pinned Skills section.
 function setupAnchorScroll() {
   document.addEventListener("click", (e) => {
+    // Panels that open the pop-up are "#projects" links already handled.
+    if (e.defaultPrevented) return;
     const link = e.target.closest('a[href^="#"]');
     if (!link || link.getAttribute("href") === "#") return;
     const target = document.querySelector(link.getAttribute("href"));
@@ -501,6 +559,7 @@ function setupHorizontalScroll() {
 async function boot() {
   await Promise.all([initInfo(), initProjects()]);
   setupBackToTop();
+  setupProjectModal(); // before setupAnchorScroll(): its click handler must run first
   setupAnchorScroll();
   setupHeroLines();
   playIntro();
